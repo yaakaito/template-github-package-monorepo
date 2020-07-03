@@ -1,0 +1,63 @@
+name: release
+on: 
+  push:
+    branches:
+      - master
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: master
+          fetch-depth: 0
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ github.event_name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ github.event_name }}-
+      - run: yarn install --frozen-lockfile
+      - run: ./scripts/version.js patch
+      - if: "startsWith(github.event.head_commit.message, '[minor]')"
+        run: ./scripts/version.js minor
+      - if: "startsWith(github.event.head_commit.message, '[major]')"
+        run: ./scripts/version.js major
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=`node -e "console.log(require('./package.json').version)"`
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "github-actions+${GITHUB_ACTOR}@users.noreply.github.com"
+          git add .
+          git commit -m "chore(release): v${VERSION}"
+          git push https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git master
+          git tag v$VERSION 
+          git push https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git v$VERSION
+  publish:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: master
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+      - uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ github.event_name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ github.event_name }}-
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm config set //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
+          ./scripts/publish.js

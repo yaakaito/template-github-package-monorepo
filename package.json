@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "version": "0.0.1",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "commander": "^5.1.0",
+    "semver": "^7.3.2",
+    "typescript": "^3.8.3"
+  },
+  "scripts": {
+    "build": "yarn workspaces run build"
+  }
+}
