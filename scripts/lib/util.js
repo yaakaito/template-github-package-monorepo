@@ -2,7 +2,7 @@ const path = require('path')
 const fs = require('fs')
 const promisify = require('util').promisify
 
-const packages = async (dir = path.resolve(__dirname, '../../packages'))  => {
+const packages = async (onlyPublic = false, dir = path.resolve(__dirname, '../../packages'))  => {
     const dirents = await promisify(fs.readdir)(dir, { withFileTypes: true })
     const packages = []
     for (const dirent of dirents) {
@@ -12,15 +12,17 @@ const packages = async (dir = path.resolve(__dirname, '../../packages'))  => {
         try {
             const packageJsonPath = path.resolve(dir, dirent.name, 'package.json')
             const packageJson = await readJson(packageJsonPath)
-            const { name } = packageJson
-            packages.push({
-                name,
-                path: path.resolve(dir, dirent.name),
-                packageJson,
-                update: async function () {
-                    await writeJson(packageJsonPath, this.packageJson)
-                }
-            })
+            const { name, private } = packageJson
+            if (!onlyPublic || !private) {
+                packages.push({
+                    name,
+                    path: path.resolve(dir, dirent.name),
+                    packageJson,
+                    update: async function () {
+                        await writeJson(packageJsonPath, this.packageJson)
+                    }
+                })
+            }
         } catch(e) {
             console.log(e)
             continue
