@@ -10,7 +10,7 @@ const main = async() => {
     const log = console.log
     try {
         const { version } = await workspace()
-        const pkgs = await packages()
+        const pkgs = await packages(true)
 
         for (const pkg of pkgs) {
             const { stdout, stderr } = await promisify(exec)(`cd ${pkg.path} && yarn publish --new-version ${version}`)
